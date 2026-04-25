@@ -50,8 +50,12 @@ If you want to push back to this repo, set up auth once:
 Copy the two files in `windows/` to your Windows user profile:
 
 ```powershell
-# From PowerShell on the Windows side
-$repo = "\\wsl$\Ubuntu-24.04\home\gud\windows-dotfiles\windows"
+# From PowerShell on the Windows side.
+# Auto-detects your WSL distro name and Linux username, no hand-editing.
+$distro  = (wsl.exe -l -q | Where-Object { $_.Trim() -ne '' } | Select-Object -First 1).Trim()
+$wslUser = (wsl.exe -d $distro whoami).Trim()
+$repo    = "\\wsl$\$distro\home\$wslUser\windows-dotfiles\windows"
+
 Copy-Item "$repo\.wezterm.lua" $HOME\.wezterm.lua
 New-Item -ItemType Directory -Force $HOME\.config | Out-Null
 Copy-Item "$repo\.config\starship.toml" $HOME\.config\starship.toml

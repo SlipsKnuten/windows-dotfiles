@@ -1,7 +1,13 @@
 local wezterm = require 'wezterm'
 local config = wezterm.config_builder()
 
-config.default_domain = 'WSL:Ubuntu-24.04'
+-- Pick whichever WSL Ubuntu distro is registered, regardless of version suffix.
+local function wsl_ubuntu()
+  for _, d in ipairs(wezterm.default_wsl_domains()) do
+    if d.name:match("Ubuntu") then return d.name end
+  end
+end
+config.default_domain = wsl_ubuntu() or 'local'
 
 config.font = wezterm.font('Hack Nerd Font', { weight = 'Regular' })
 
