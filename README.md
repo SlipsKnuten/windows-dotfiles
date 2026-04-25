@@ -12,7 +12,8 @@ for the Arch/Omarchy machine.
 git/        starship/      tmux/         lazygit/   mise/   nvim/   xdg/
             \____________ stowed into $HOME on WSL ____________/
 
-windows/    .wezterm.lua + .config/starship.toml — copied to %USERPROFILE% on Windows
+windows/    .wezterm.lua + .config/starship.toml + disable-winkey.ahk
+            — copied to %USERPROFILE% / %USERPROFILE%\Documents on Windows
 
 install-wsl.sh    Bootstrap a fresh WSL Ubuntu install
 ```
@@ -39,10 +40,9 @@ $repo = "\\wsl$\Ubuntu-24.04\home\gud\windows-dotfiles\windows"
 Copy-Item "$repo\.wezterm.lua" $HOME\.wezterm.lua
 New-Item -ItemType Directory -Force $HOME\.config | Out-Null
 Copy-Item "$repo\.config\starship.toml" $HOME\.config\starship.toml
+Copy-Item "$repo\disable-winkey.ahk" $HOME\Documents\disable-winkey.ahk
 ```
 
-Then ensure `starship` is on PATH and your PowerShell profile contains:
-
-```powershell
-Invoke-Expression (&starship init powershell)
-```
+Then:
+- Ensure `starship` is on PATH and your PowerShell profile contains `Invoke-Expression (&starship init powershell)`.
+- Install AutoHotkey v2 and run `disable-winkey.ahk` (set it to autostart by placing a shortcut in `shell:startup`).
