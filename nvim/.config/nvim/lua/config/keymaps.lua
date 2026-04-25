@@ -2,15 +2,17 @@
 -- Default keymaps that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
 -- Add any additional keymaps here
 
--- Super+j/k to move 5 lines at a time
-vim.keymap.set({ "n", "v" }, "<D-j>", "5j", { desc = "Move down 5 lines" })
-vim.keymap.set({ "n", "v" }, "<D-k>", "5k", { desc = "Move up 5 lines" })
+-- Alt+j/k to move 5 lines at a time
+-- (was <D-...> which is macOS Cmd; Super/Windows-key is intercepted by the
+-- desktop on both Hyprland and Windows, so Alt is the portable choice.)
+vim.keymap.set({ "n", "v" }, "<M-j>", "5j", { desc = "Move down 5 lines" })
+vim.keymap.set({ "n", "v" }, "<M-k>", "5k", { desc = "Move up 5 lines" })
 
--- Super+h/l to go to beginning/end of line
-vim.keymap.set({ "n", "v" }, "<D-h>", "^", { desc = "Go to beginning of line" })
-vim.keymap.set({ "n", "v" }, "<D-l>", "$", { desc = "Go to end of line" })
-vim.keymap.set("i", "<D-h>", "<Home>", { desc = "Go to beginning of line" })
-vim.keymap.set("i", "<D-l>", "<End>", { desc = "Go to end of line" })
+-- Alt+h/l to go to beginning/end of line
+vim.keymap.set({ "n", "v" }, "<M-h>", "^", { desc = "Go to beginning of line" })
+vim.keymap.set({ "n", "v" }, "<M-l>", "$", { desc = "Go to end of line" })
+vim.keymap.set("i", "<M-h>", "<Home>", { desc = "Go to beginning of line" })
+vim.keymap.set("i", "<M-l>", "<End>", { desc = "Go to end of line" })
 
 -- Swap i and a: i inserts after cursor, a inserts before
 vim.keymap.set("n", "i", "a", { noremap = true, desc = "Insert after cursor" })
