@@ -114,6 +114,15 @@ if command -v mise >/dev/null; then
   mise install || warn "mise install failed — run manually once you've opened a new shell"
 fi
 
+# --------------------------------------------------------- pre-sync nvim plugins
+# So the first interactive nvim launch is instant instead of waiting for Lazy
+# to clone ~70 plugins. Mason tools install on first nvim open after this.
+if command -v nvim >/dev/null; then
+  log "Syncing nvim plugins (headless)"
+  nvim --headless "+Lazy! sync" +qa 2>&1 | tail -3 || \
+    warn "Lazy sync failed — open nvim interactively to retry"
+fi
+
 # ------------------------------------------------------------------- summary
 cat <<EOF
 
@@ -121,6 +130,6 @@ Done.
 
 Next steps:
   * Open a new shell, or:  source ~/.bashrc
-  * Launch nvim            (LazyVim will sync plugins on first run)
+  * Launch nvim            (Mason will install LSP/formatters on first open)
   * Inside nvim:           :checkhealth    (confirm providers / treesitter)
 EOF

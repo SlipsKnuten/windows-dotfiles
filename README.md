@@ -20,15 +20,30 @@ install-wsl.sh    Bootstrap a fresh WSL Ubuntu install
 
 ## WSL setup (fresh install)
 
+Inside WSL Ubuntu, on a clean install:
+
 ```bash
-git clone git@github.com:SlipsKnuten/windows-dotfiles.git ~/windows-dotfiles
-cd ~/windows-dotfiles
-./install-wsl.sh
+git clone https://github.com/SlipsKnuten/windows-dotfiles.git ~/windows-dotfiles
+cd ~/windows-dotfiles && ./install-wsl.sh
 ```
 
-The script installs the apt baseline, pulls neovim/lazygit/starship/mise from
-vendor releases (apt versions lag), stows the Linux configs, and appends a
-guarded starship/mise activation block to `~/.bashrc`.
+No auth needed — the repo is public, HTTPS clone works out of the box.
+
+The script:
+- Installs the apt baseline (build-essential, ripgrep, fd-find, tmux, stow, …).
+- Pulls neovim, lazygit, starship, mise from vendor releases (apt versions lag).
+- Stows the Linux configs into `~/.config`.
+- Appends a guarded starship/mise activation block to `~/.bashrc`.
+- Pre-syncs LazyVim plugins headlessly so the first `nvim` launch is instant.
+
+After it finishes: open a new shell, then `nvim` — Mason will install
+LSPs/formatters on first open. Run `:checkhealth` to verify.
+
+If you want to push back to this repo, set up auth once:
+- HTTPS: `sudo apt install gh && gh auth login`, or
+- SSH: `ssh-keygen -t ed25519 -C "your@email"` then add the pubkey at
+  https://github.com/settings/ssh/new and switch the remote to
+  `git@github.com:SlipsKnuten/windows-dotfiles.git`.
 
 ## Windows setup
 
