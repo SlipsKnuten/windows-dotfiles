@@ -2,6 +2,9 @@
 -- Default keymaps that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
 -- Add any additional keymaps here
 
+vim.keymap.set("i", "jj", "<Esc>", { desc = "Exit insert mode" })
+vim.keymap.set("v", "jj", "<Esc>", { desc = "Exit visual mode" })
+
 -- Alt+j/k to move 5 lines at a time
 -- (was <D-...> which is macOS Cmd; Super/Windows-key is intercepted by the
 -- desktop on both Hyprland and Windows, so Alt is the portable choice.)
