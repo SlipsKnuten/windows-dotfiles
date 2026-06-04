@@ -101,7 +101,7 @@ local function find_current_closer_target(line, cursor_col)
 
       local opener_col = find_pair_start(line, pair, cursor_col)
       if opener_col then
-        return opener_col
+        return cursor_col - 1
       end
     end
   end
@@ -118,11 +118,12 @@ local function find_next_opener_target(line, cursor_col)
       if char == pair.opener then
         local is_closing_quote = pair.opener == pair.closer
           and (is_escaped(line, col) or quote_is_closing(line, char, col))
-        if not is_closing_quote and find_pair_end(line, pair, col) then
+        local closer_col = find_pair_end(line, pair, col)
+        if not is_closing_quote and closer_col then
           local distance = col - cursor_col
           if not best_distance or distance < best_distance then
             best_distance = distance
-            target_col = col
+            target_col = closer_col - 1
           end
         end
         break
