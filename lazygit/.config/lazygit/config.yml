@@ -1,0 +1,7 @@
+gui:
+  sidePanels:
+    - [status]
+    - [files, worktrees, submodules]
+    - [remotes, branches, tags]
+    - [commits, reflog]
+    - [stash]
