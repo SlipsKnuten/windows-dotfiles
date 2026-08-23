@@ -1,10 +1,13 @@
 return {
-  -- Tame the signature help popup
+  -- Keep signature help manual while using Noice's bordered documentation view
   {
     "folke/noice.nvim",
     opts = {
       lsp = {
-        signature = { enabled = false },
+        signature = {
+          enabled = true,
+          auto_open = { enabled = false },
+        },
       },
       presets = {
         lsp_doc_border = true,
