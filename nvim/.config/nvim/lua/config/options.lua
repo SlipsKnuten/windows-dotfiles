@@ -7,9 +7,7 @@ vim.opt.linebreak = true
 vim.opt.breakindent = true
 
 local cargo_bin = vim.fn.expand("~/.cargo/bin")
-if not (vim.env.PATH or ""):find(cargo_bin, 1, true) then
-  vim.env.PATH = cargo_bin .. ":" .. (vim.env.PATH or "")
-end
+vim.env.PATH = cargo_bin .. ":" .. (vim.env.PATH or "")
 
 if vim.fn.has("wsl") == 1 then
   local linux_paths = {}

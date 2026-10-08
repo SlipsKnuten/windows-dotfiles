@@ -167,6 +167,13 @@ vim.keymap.set({ "n", "v" }, "<M-l>", "$", { desc = "Go to end of line" })
 vim.keymap.set("i", "<M-h>", "<Home>", { desc = "Go to beginning of line" })
 vim.keymap.set("i", "<M-l>", "<End>", { desc = "Go to end of line" })
 
+-- Alt+1-9 to select buffers by their Bufferline position
+for i = 1, 9 do
+  vim.keymap.set("n", "<M-" .. i .. ">", "<cmd>BufferLineGoToBuffer " .. i .. "<cr>", {
+    desc = "Go to buffer " .. i,
+  })
+end
+
 -- Swap i and a: i inserts after cursor, a inserts before
 vim.keymap.set("n", "i", "a", { noremap = true, desc = "Insert after cursor" })
 vim.keymap.set("n", "a", "i", { noremap = true, desc = "Insert before cursor" })
