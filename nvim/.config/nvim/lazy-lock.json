@@ -1,4 +1,5 @@
 {
+  "jira.nvim": { "branch": "main", "commit": "af5a6edbacd02a59994bd37c9720895b57f0be5d" },
   "LazyVim": { "branch": "main", "commit": "c10948c50b18fae7f256433afdef09e432410480" },
   "SchemaStore.nvim": { "branch": "main", "commit": "6bcdcb22f02b43b990b650b3ab40c65aa193c3f8" },
   "aether.nvim": { "branch": "v3", "commit": "02af9ba1ef9d6f136a6b20404d39f2a4e3857e16" },
