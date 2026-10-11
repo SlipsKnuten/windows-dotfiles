@@ -189,3 +189,9 @@ vim.api.nvim_create_autocmd("InsertLeave", {
   end,
   desc = "Prevent cursor from moving back on insert leave",
 })
+
+-- Re-open the last picker (e.g. the `gr` reference list) at the same entry,
+-- like stepping through references in VSCode.
+vim.keymap.set("n", "<M-r>", function()
+  Snacks.picker.resume()
+end, { desc = "Resume last picker" })
