@@ -196,6 +196,46 @@ vim.keymap.set("n", "<M-r>", function()
   Snacks.picker.resume()
 end, { desc = "Resume last picker" })
 
--- Alt+o/i to go back/forward in the jumplist (same as <C-o>/<C-i>)
-vim.keymap.set("n", "<M-o>", "<C-o>", { desc = "Jump back" })
-vim.keymap.set("n", "<M-i>", "<C-i>", { desc = "Jump forward" })
+-- Alt+i/o to go back/forward through gd/gr navigation only. This walks the
+-- tag stack (which the LSP pickers push to) rather than the jumplist, so it
+-- ignores searches, gg/G and jumps restored from earlier sessions.
+-- `:tag` re-resolves the symbol by name instead of returning to where we were,
+-- so forward positions are kept here per window and dropped as soon as a new
+-- gd/gr moves the tag stack on.
+local forward = {} ---@type table<integer, { idx: integer, items: { buf: integer, pos: integer[] }[] }>
+
+vim.keymap.set("n", "<M-i>", function()
+  local win = vim.api.nvim_get_current_win()
+  local stack = vim.fn.gettagstack(win)
+  if stack.curidx <= 1 then
+    return
+  end
+  local fwd = forward[win]
+  if not fwd or fwd.idx ~= stack.curidx then
+    fwd = { idx = stack.curidx, items = {} }
+  end
+  table.insert(fwd.items, { buf = vim.api.nvim_get_current_buf(), pos = vim.api.nvim_win_get_cursor(win) })
+  if pcall(vim.cmd.pop) then
+    fwd.idx = vim.fn.gettagstack(win).curidx
+    forward[win] = fwd
+  end
+end, { desc = "Navigate back" })
+
+vim.keymap.set("n", "<M-o>", function()
+  local win = vim.api.nvim_get_current_win()
+  local fwd = forward[win]
+  if not fwd or fwd.idx ~= vim.fn.gettagstack(win).curidx or #fwd.items == 0 then
+    forward[win] = nil
+    return
+  end
+  local target = table.remove(fwd.items)
+  if not vim.api.nvim_buf_is_valid(target.buf) then
+    forward[win] = nil
+    return
+  end
+  local from = { vim.api.nvim_get_current_buf(), vim.fn.line("."), vim.fn.col("."), 0 }
+  vim.fn.settagstack(win, { items = { { tagname = vim.fn.expand("<cword>"), from = from } } }, "t")
+  fwd.idx = vim.fn.gettagstack(win).curidx
+  vim.api.nvim_win_set_buf(win, target.buf)
+  pcall(vim.api.nvim_win_set_cursor, win, target.pos)
+end, { desc = "Navigate forward" })
