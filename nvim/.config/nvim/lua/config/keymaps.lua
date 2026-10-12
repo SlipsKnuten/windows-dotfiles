@@ -195,3 +195,7 @@ vim.api.nvim_create_autocmd("InsertLeave", {
 vim.keymap.set("n", "<M-r>", function()
   Snacks.picker.resume()
 end, { desc = "Resume last picker" })
+
+-- Alt+o/i to go back/forward in the jumplist (same as <C-o>/<C-i>)
+vim.keymap.set("n", "<M-o>", "<C-o>", { desc = "Jump back" })
+vim.keymap.set("n", "<M-i>", "<C-i>", { desc = "Jump forward" })
