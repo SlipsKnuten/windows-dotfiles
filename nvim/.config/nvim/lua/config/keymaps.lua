@@ -167,6 +167,18 @@ vim.keymap.set({ "n", "v" }, "<M-l>", "$", { desc = "Go to end of line" })
 vim.keymap.set("i", "<M-h>", "<Home>", { desc = "Go to beginning of line" })
 vim.keymap.set("i", "<M-l>", "<End>", { desc = "Go to end of line" })
 
+-- Primeagen-style navigation: keep the cursor centred after big jumps so the
+-- eye doesn't have to hunt for it.
+vim.keymap.set("n", "<C-d>", "<C-d>zz", { desc = "Half page down (centred)" })
+vim.keymap.set("n", "<C-u>", "<C-u>zz", { desc = "Half page up (centred)" })
+-- Like LazyVim's own n/N, n always goes down and N up, even after a ? or # search.
+vim.keymap.set("n", "n", "'Nn'[v:searchforward].'zzzv'", { expr = true, desc = "Next search match (centred)" })
+vim.keymap.set("n", "N", "'nN'[v:searchforward].'zzzv'", { expr = true, desc = "Previous search match (centred)" })
+
+-- Shift+J/K in visual mode moves the selected lines and re-indents them.
+vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv", { silent = true, desc = "Move selection down" })
+vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv", { silent = true, desc = "Move selection up" })
+
 -- Alt+1-9 to select buffers by their Bufferline position
 for i = 1, 9 do
   vim.keymap.set("n", "<M-" .. i .. ">", "<cmd>BufferLineGoToBuffer " .. i .. "<cr>", {
