@@ -57,6 +57,8 @@ These are mostly the habits of ThePrimeagen, TJ DeVries and folke (the LazyVim a
 | `Space 1` … `Space 9` | Jump to pinned file 1–9 |
 | `Space Space` | Find a file by name |
 | `Alt+1` … `Alt+9` | Go to buffer tab 1–9 |
+| `Alt+w` | Close the current buffer tab (asks first if it has unsaved changes) |
+| `Space b o` | Close every buffer tab except the current one |
 | `-` | File browser for the current folder (Oil) |
 
 ### Custom keys in this config

@@ -186,6 +186,12 @@ for i = 1, 9 do
   })
 end
 
+-- Alt+w closes the current buffer tab without closing its window (asks first
+-- if there are unsaved changes)
+vim.keymap.set("n", "<M-w>", function()
+  Snacks.bufdelete()
+end, { desc = "Close buffer" })
+
 -- Swap i and a: i inserts after cursor, a inserts before
 vim.keymap.set("n", "i", "a", { noremap = true, desc = "Insert after cursor" })
 vim.keymap.set("n", "a", "i", { noremap = true, desc = "Insert before cursor" })
