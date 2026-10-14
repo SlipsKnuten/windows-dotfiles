@@ -24,7 +24,8 @@
 ;;
 ;; Emergency exit: physical Left Ctrl + Space + Esc kills kanata.
 ;;
-;; Based on kanata's cfg_samples/home-row-mod-advanced.kbd.
+;; Based on kanata's cfg_samples/home-row-mod-advanced.kbd. Same file as
+;; omarchy-dotfiles/kanata/.config/kanata/kanata.kbd, so keep the two in sync.
 ;; ============================================================================
 
 (defcfg
