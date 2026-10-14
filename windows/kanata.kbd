@@ -1,25 +1,24 @@
 ;; ============================================================================
-;; kanata.kbd — home row mods for Ctrl and Shift
+;; kanata.kbd — home row mods for Alt and Shift
 ;;
-;; Goal: stop the pinky from doing modifier work. Hold a home-row key with a
-;; stronger finger and it acts as Ctrl/Shift; tap it and it types the letter.
-;; Only the left hand has mods; Alt, Caps Lock and every other key are left
-;; alone.
+;; Goal: no more stretching for Shift. Hold a home-row key and it acts as
+;; Alt/Shift; tap it and it types the letter. Only the left hand has mods;
+;; Ctrl, Caps Lock and every other key are left alone.
 ;;
 ;;   Left hand
-;;    a    s     d     f
-;;    .  Ctrl  Shift   .
+;;    a     s     d    f
+;;   Alt  Shift   .    .
 ;;
 ;; Examples:
-;;   Ctrl+u       -> hold s, press u
-;;   Ctrl+d       -> hold s, press d
-;;   Ctrl+Space   -> hold s, press Space   (tmux prefix)
-;;   Shift+J      -> hold d, press j
-;;   capital A    -> hold d, press a
-;;   Ctrl+Shift+V -> hold s and d, press v
+;;   Alt+j        -> hold a, press j
+;;   Alt+w        -> hold a, press w
+;;   capital J    -> hold s, press j
+;;   capital A    -> hold s, press a
+;;   Alt+Shift+H  -> hold a and s, press h
+;; Capital S and Alt+a still need the real Shift/Alt key.
 ;;
 ;; A modifier only kicks in once the other key has been pressed AND released
-;; while s/d is still held, so rolling through "sd" or "ds" types letters.
+;; while a/s is still held, so rolling through "as" or "sa" types letters.
 ;; Right after a fast tap the mods are also switched off briefly, so they don't
 ;; misfire mid-word.
 ;;
@@ -34,24 +33,24 @@
 )
 
 (defsrc
-  s   d
+  a   s
 )
 
 (defvar
-  ;; Tuning: if letters turn into Ctrl/Shift while typing, raise hold-time.
+  ;; Tuning: if letters turn into Alt/Shift while typing, raise hold-time.
   ;; If holding feels sluggish before the modifier kicks in, lower it.
   tap-time 200
   hold-time 200
 )
 
 (deflayer base
-  @s  @d
+  @a  @s
 )
 
 ;; While typing quickly the home row mods are switched off, and they come back
 ;; after 20 ms with no key activity.
 (deflayer nomods
-  s   d
+  a   s
 )
 
 (deffakekeys
@@ -64,6 +63,6 @@
     (on-idle-fakekey to-base tap 20)
   )
 
-  s (tap-hold-release $tap-time $hold-time (multi s @tap) lctl)
-  d (tap-hold-release $tap-time $hold-time (multi d @tap) lsft)
+  a (tap-hold-release $tap-time $hold-time (multi a @tap) lalt)
+  s (tap-hold-release $tap-time $hold-time (multi s @tap) lsft)
 )

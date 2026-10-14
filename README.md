@@ -65,12 +65,12 @@ It's safe to run again, for example after a `git pull` that changed
 
 ### Home row mods (kanata)
 
-`kanata.kbd` takes Ctrl and Shift off the pinkies: hold `s` for Ctrl and
-hold `d` for Shift, and tap them to type the letter as usual (`Ctrl+u` = hold
-`s`, press `u`). The examples are in the comment at the top of the file.
+`kanata.kbd` puts Alt and Shift on the home row: hold `a` for Alt and hold
+`s` for Shift, and tap them to type the letter as usual (capital `J` = hold
+`s`, press `j`). The examples are in the comment at the top of the file.
 
 - Emergency exit: physical Left Ctrl + Space + Esc.
 - Windows won't let kanata affect apps running as Administrator unless kanata
   itself runs as admin.
-- If letters turn into Ctrl/Shift while typing fast, raise `hold-time` in
+- If letters turn into Alt/Shift while typing fast, raise `hold-time` in
   `kanata.kbd`, then run the setup script again.
