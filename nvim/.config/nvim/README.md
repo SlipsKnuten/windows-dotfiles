@@ -6,6 +6,8 @@ My [LazyVim](https://github.com/LazyVim/LazyVim) config. See the [documentation]
 
 How to read the keys: `Ctrl+d` means hold Ctrl and press d. `Space h` means press Space, then h (Space is the leader key). `] f` means press `]`, then `f`. `Shift+J` is a capital J. A plain letter is just that key.
 
+With kanata running (see the repo's root README), hold `s` for Ctrl and hold `d` for Shift, e.g. `Ctrl+d` = hold `s`, press `d`.
+
 These are mostly the habits of ThePrimeagen, TJ DeVries and folke (the LazyVim author).
 
 ### Up and down

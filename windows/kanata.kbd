@@ -1,0 +1,69 @@
+;; ============================================================================
+;; kanata.kbd — home row mods for Ctrl and Shift
+;;
+;; Goal: stop the pinky from doing modifier work. Hold a home-row key with a
+;; stronger finger and it acts as Ctrl/Shift; tap it and it types the letter.
+;; Only the left hand has mods; Alt, Caps Lock and every other key are left
+;; alone.
+;;
+;;   Left hand
+;;    a    s     d     f
+;;    .  Ctrl  Shift   .
+;;
+;; Examples:
+;;   Ctrl+u       -> hold s, press u
+;;   Ctrl+d       -> hold s, press d
+;;   Ctrl+Space   -> hold s, press Space   (tmux prefix)
+;;   Shift+J      -> hold d, press j
+;;   capital A    -> hold d, press a
+;;   Ctrl+Shift+V -> hold s and d, press v
+;;
+;; A modifier only kicks in once the other key has been pressed AND released
+;; while s/d is still held, so rolling through "sd" or "ds" types letters.
+;; Right after a fast tap the mods are also switched off briefly, so they don't
+;; misfire mid-word.
+;;
+;; Emergency exit: physical Left Ctrl + Space + Esc kills kanata.
+;;
+;; Based on kanata's cfg_samples/home-row-mod-advanced.kbd.
+;; ============================================================================
+
+(defcfg
+  ;; Every key not listed in defsrc passes through untouched.
+  process-unmapped-keys yes
+)
+
+(defsrc
+  s   d
+)
+
+(defvar
+  ;; Tuning: if letters turn into Ctrl/Shift while typing, raise hold-time.
+  ;; If holding feels sluggish before the modifier kicks in, lower it.
+  tap-time 200
+  hold-time 200
+)
+
+(deflayer base
+  @s  @d
+)
+
+;; While typing quickly the home row mods are switched off, and they come back
+;; after 20 ms with no key activity.
+(deflayer nomods
+  s   d
+)
+
+(deffakekeys
+  to-base (layer-switch base)
+)
+
+(defalias
+  tap (multi
+    (layer-switch nomods)
+    (on-idle-fakekey to-base tap 20)
+  )
+
+  s (tap-hold-release $tap-time $hold-time (multi s @tap) lctl)
+  d (tap-hold-release $tap-time $hold-time (multi d @tap) lsft)
+)
