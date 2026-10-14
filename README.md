@@ -12,8 +12,8 @@ for the Arch/Omarchy machine.
 git/        starship/      tmux/         lazygit/   mise/   nvim/   xdg/
             \____________ stowed into $HOME on WSL ____________/
 
-windows/    .wezterm.lua + .config/starship.toml + disable-winkey.ahk + kanata.kbd
-            — copied to %USERPROFILE% / %USERPROFILE%\Documents on Windows
+windows/    .wezterm.lua + kanata.kbd + setup-windows.ps1
+            — the script copies them into %USERPROFILE% and installs kanata
 
 install-wsl.sh    Bootstrap a fresh WSL Ubuntu install
 ```
@@ -47,26 +47,21 @@ If you want to push back to this repo, set up auth once:
 
 ## Windows setup
 
-Copy the files in `windows/` to your Windows user profile:
+From inside WSL, after cloning this repo:
 
-```powershell
-# From PowerShell on the Windows side.
-# Auto-detects your WSL distro name and Linux username, no hand-editing.
-$distro  = (wsl.exe -l -q | Where-Object { $_.Trim() -ne '' } | Select-Object -First 1).Trim()
-$wslUser = (wsl.exe -d $distro whoami).Trim()
-$repo    = "\\wsl$\$distro\home\$wslUser\windows-dotfiles\windows"
-
-Copy-Item "$repo\.wezterm.lua" $HOME\.wezterm.lua
-New-Item -ItemType Directory -Force $HOME\.config | Out-Null
-Copy-Item "$repo\.config\starship.toml" $HOME\.config\starship.toml
-Copy-Item "$repo\disable-winkey.ahk" $HOME\Documents\disable-winkey.ahk
-New-Item -ItemType Directory -Force $HOME\.config\kanata | Out-Null
-Copy-Item "$repo\kanata.kbd" $HOME\.config\kanata\kanata.kbd
+```bash
+powershell.exe -ExecutionPolicy Bypass -File "$(wslpath -w ~/windows-dotfiles/windows/setup-windows.ps1)"
 ```
 
-Then:
-- Ensure `starship` is on PATH and your PowerShell profile contains `Invoke-Expression (&starship init powershell)`.
-- Install AutoHotkey v2 and run `disable-winkey.ahk` (set it to autostart by placing a shortcut in `shell:startup`).
+`windows/setup-windows.ps1`:
+- Copies `.wezterm.lua` to `%USERPROFILE%` and `kanata.kbd` to `%USERPROFILE%\.config\kanata\`.
+- Downloads kanata (pinned to `$KanataVersion` at the top of the script),
+  verifies its checksum, and installs it as `%USERPROFILE%\bin\kanata.exe`.
+- Checks the config, adds a Startup shortcut so kanata runs on login, and
+  (re)starts it.
+
+It's safe to run again, for example after a `git pull` that changed
+`kanata.kbd`. It only downloads kanata again when the version changes.
 
 ### Home row mods (kanata)
 
@@ -74,22 +69,8 @@ Then:
 hold `d` for Shift, and tap them to type the letter as usual (`Ctrl+u` = hold
 `s`, press `u`). The examples are in the comment at the top of the file.
 
-1. Download `windows-binaries-x64.zip` from the
-   [kanata releases](https://github.com/jtroo/kanata/releases) and extract
-   `kanata_windows_gui_winIOv2_x64.exe` (the tray-icon build, no console
-   window) to e.g. `$HOME\bin\kanata.exe`.
-2. Run it once to try it out:
-   ```powershell
-   & $HOME\bin\kanata.exe -c $HOME\.config\kanata\kanata.kbd
-   ```
-3. To start it on login, put a shortcut in `shell:startup` (same as the
-   AutoHotkey script) with the full paths written out as the target, since
-   shortcuts don't understand `$HOME`:
-   `C:\Users\<you>\bin\kanata.exe -c C:\Users\<you>\.config\kanata\kanata.kbd`
-
-Notes:
 - Emergency exit: physical Left Ctrl + Space + Esc.
 - Windows won't let kanata affect apps running as Administrator unless kanata
   itself runs as admin.
 - If letters turn into Ctrl/Shift while typing fast, raise `hold-time` in
-  `kanata.kbd`, then restart kanata.
+  `kanata.kbd`, then run the setup script again.
