@@ -2,7 +2,7 @@
 #
 # Reproduce this config on a fresh WSL Ubuntu install.
 #
-# Installs portable toolchain via apt, pulls neovim/lazygit/starship/mise from
+# Installs portable toolchain via apt, pulls neovim/lazygit/mise from
 # vendor releases (since apt versions lag or are missing), and stows only the
 # packages that make sense without a Wayland desktop.
 #
@@ -62,14 +62,6 @@ else
   log "lazygit already installed"
 fi
 
-# --------------------------------------------------------------------- starship
-if ! command -v starship >/dev/null; then
-  log "Installing starship"
-  curl -sS https://starship.rs/install.sh | sh -s -- -y -b "$HOME/.local/bin"
-else
-  log "starship already installed"
-fi
-
 # ------------------------------------------------------------------------- mise
 if ! command -v mise >/dev/null && [ ! -x "$HOME/.local/bin/mise" ]; then
   log "Installing mise"
@@ -85,7 +77,7 @@ fi
 
 # ------------------------------------------------------------------- stow subset
 # Omit: bash (see note below), bin, hypr, waybar, kitty, ghostty, zen, systemd, system.
-STOW_PACKAGES=(git lazygit mise nvim starship tmux xdg)
+STOW_PACKAGES=(git lazygit mise nvim tmux xdg)
 
 log "Stowing dotfiles (${STOW_PACKAGES[*]})"
 stow -v -R -t "$HOME" "${STOW_PACKAGES[@]}"
@@ -93,14 +85,13 @@ stow -v -R -t "$HOME" "${STOW_PACKAGES[@]}"
 # --------------------------------------------------------- bashrc additions block
 # We intentionally don't stow bash/ on WSL: Ubuntu's default .bashrc is richer
 # than the Omarchy-centric one. Instead, append a small guarded block so
-# starship/mise activate in new shells.
+# mise activates in new shells.
 MARK="# --- dotfiles additions ---"
 if ! grep -qF "$MARK" "$HOME/.bashrc" 2>/dev/null; then
   log "Appending dotfiles block to ~/.bashrc"
   cat >> "$HOME/.bashrc" <<'EOF'
 
 # --- dotfiles additions ---
-command -v starship >/dev/null && eval "$(starship init bash)"
 command -v mise     >/dev/null && eval "$(mise activate bash)"
 alias lg='lazygit'
 EOF

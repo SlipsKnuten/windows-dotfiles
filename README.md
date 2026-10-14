@@ -1,7 +1,7 @@
 # windows-dotfiles
 
-Config for the Windows machine: WSL Ubuntu (Neovim/LazyVim, tmux, starship, etc.)
-plus the native Windows side (WezTerm, starship).
+Config for the Windows machine: WSL Ubuntu (Neovim/LazyVim, tmux, etc.)
+plus the native Windows side (WezTerm, kanata).
 
 Sibling repo: [omarchy-dotfiles](https://github.com/SlipsKnuten/omarchy-dotfiles)
 for the Arch/Omarchy machine.
@@ -9,8 +9,8 @@ for the Arch/Omarchy machine.
 ## Layout
 
 ```
-git/        starship/      tmux/         lazygit/   mise/   nvim/   xdg/
-            \____________ stowed into $HOME on WSL ____________/
+git/   tmux/   lazygit/   mise/   nvim/   xdg/
+\______ stowed into $HOME on WSL ______/
 
 windows/    .wezterm.lua + kanata.kbd + setup-windows.ps1
             — the script copies them into %USERPROFILE% and installs kanata
@@ -31,9 +31,9 @@ No auth needed — the repo is public, HTTPS clone works out of the box.
 
 The script:
 - Installs the apt baseline (build-essential, ripgrep, fd-find, tmux, stow, …).
-- Pulls neovim, lazygit, starship, mise from vendor releases (apt versions lag).
+- Pulls neovim, lazygit, mise from vendor releases (apt versions lag).
 - Stows the Linux configs into `~/.config`.
-- Appends a guarded starship/mise activation block to `~/.bashrc`.
+- Appends a guarded mise activation block to `~/.bashrc`.
 - Pre-syncs LazyVim plugins headlessly so the first `nvim` launch is instant.
 
 After it finishes: open a new shell, then `nvim` — Mason will install
