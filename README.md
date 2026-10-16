@@ -47,18 +47,29 @@ If you want to push back to this repo, set up auth once:
 
 ## Windows setup
 
-From inside WSL, after cloning this repo:
+After cloning this repo in WSL, run this in a normal (not admin) Windows
+PowerShell. Change `Ubuntu` and `pepw` if your distro or WSL user differ:
 
-```bash
-powershell.exe -ExecutionPolicy Bypass -File "$(wslpath -w ~/windows-dotfiles/windows/setup-windows.ps1)"
+```powershell
+Set-Location \\wsl.localhost\Ubuntu\home\pepw\windows-dotfiles\windows; & ([scriptblock]::Create((Get-Content .\setup-windows.ps1 -Raw)))
 ```
 
+It loads the script as text instead of running the file, so it also works on
+work PCs where IT enforces `AllSigned` (which `-ExecutionPolicy Bypass` can't
+override). No admin needed: everything goes into your own user folder. Don't
+run it as admin — on a work PC that is often a different account, so kanata
+would be installed into that account's profile instead of yours.
+
 `windows/setup-windows.ps1`:
-- Copies `.wezterm.lua` to `%USERPROFILE%` and `kanata.kbd` to `%USERPROFILE%\.config\kanata\`.
+- Copies `.wezterm.lua` to `%USERPROFILE%` and `kanata.kbd` to `%APPDATA%\kanata\` (where kanata looks for it by default).
 - Downloads kanata (pinned to `$KanataVersion` at the top of the script),
   verifies its checksum, and installs it as `%USERPROFILE%\bin\kanata.exe`.
 - Checks the config, adds a Startup shortcut so kanata runs on login, and
-  (re)starts it.
+  (re)starts it through Explorer, so closing the terminal doesn't kill it.
+
+kanata has no window, only a tray icon. To start it by hand, open
+`kanata.exe` (e.g. search for it) — it finds the config in `%APPDATA%\kanata\`
+on its own.
 
 It's safe to run again, for example after a `git pull` that changed
 `kanata.kbd`. It only downloads kanata again when the version changes.

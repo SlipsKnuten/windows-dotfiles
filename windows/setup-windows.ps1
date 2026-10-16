@@ -2,8 +2,8 @@
 # ============================================================================
 # setup-windows.ps1 — set up the Windows side of windows-dotfiles
 #
-# Run it from WSL:
-#   powershell.exe -ExecutionPolicy Bypass -File "$(wslpath -w ~/windows-dotfiles/windows/setup-windows.ps1)"
+# Run it from a normal (not admin) Windows PowerShell — see README for why:
+#   Set-Location \\wsl.localhost\Ubuntu\home\pepw\windows-dotfiles\windows; & ([scriptblock]::Create((Get-Content .\setup-windows.ps1 -Raw)))
 #
 # What it does (safe to run again, e.g. after a git pull):
 #   1. Copies .wezterm.lua and kanata.kbd into your Windows user profile.
@@ -20,10 +20,12 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue" # Invoke-WebRequest is very slow with the progress bar on
 
-$repo = $PSScriptRoot
+# Empty when the script is loaded as text (see README); then use the current folder.
+$repo = if ($PSScriptRoot) { $PSScriptRoot } else { $PWD.ProviderPath }
 $startup = [Environment]::GetFolderPath("Startup")
 $kanataExe = "$HOME\bin\kanata.exe"
-$kanataCfg = "$HOME\.config\kanata\kanata.kbd"
+# Where kanata looks by default, so kanata.exe also works when opened directly.
+$kanataCfg = "$env:APPDATA\kanata\kanata.kbd"
 
 function Step($text) { Write-Host "`n== $text" -ForegroundColor Cyan }
 function Note($text) { Write-Host "   $text" }
@@ -93,10 +95,12 @@ Note "Config OK"
 
 New-StartupShortcut "kanata" $kanataExe "-c `"$kanataCfg`"" "$HOME\bin"
 
-# Restart so a changed config takes effect.
+# Restart so a changed config takes effect. Launch through Explorer (like a
+# double-click): started straight from here, kanata attaches to this console
+# and dies when the terminal is closed.
 Get-Process kanata -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Seconds 1
-Start-Process $kanataExe -ArgumentList "-c", "`"$kanataCfg`"" -WorkingDirectory "$HOME\bin"
+Start-Process explorer.exe "`"$startup\kanata.lnk`""
 Note "kanata started (emergency exit: Left Ctrl + Space + Esc)"
 
 Write-Host "`nDone." -ForegroundColor Green
