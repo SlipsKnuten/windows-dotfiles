@@ -83,5 +83,7 @@ It's safe to run again, for example after a `git pull` that changed
 - Emergency exit: physical Left Ctrl + Space + Esc.
 - Windows won't let kanata affect apps running as Administrator unless kanata
   itself runs as admin.
-- If letters turn into Alt/Shift while typing fast, raise `hold-time` in
-  `kanata.kbd`, then run the setup script again.
+- While you're typing, `a`/`s` are always plain letters. They can only become
+  Alt/Shift after a short pause (150 ms). If letters still turn into Alt/Shift,
+  raise `tap-hold-require-prior-idle` in `kanata.kbd`, then run the setup
+  script again.

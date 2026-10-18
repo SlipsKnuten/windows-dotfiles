@@ -17,53 +17,45 @@
 ;;   Alt+Shift+H  -> hold a and s, press h
 ;; Capital S and Alt+a still need the real Shift/Alt key.
 ;;
-;; A modifier only kicks in once the other key has been pressed AND released
-;; while a/s is still held, so rolling through "as" or "sa" types letters.
-;; Right after a fast tap the mods are also switched off briefly, so they don't
-;; misfire mid-word.
+;; How a press of a/s is decided:
+;;   1. Mid-typing (any other key pressed in the last 150 ms): it is
+;;      the letter, straight away. No waiting, and it can never turn into a mod.
+;;   2. Otherwise it waits. Another key pressed AND released while a/s is still
+;;      held makes it the mod; releasing a/s first types the letter. Rolling
+;;      through "as" or "sa" therefore still types letters.
+;;   3. Holding a/s for `hold-time` ms with no other key also makes it the mod.
 ;;
 ;; Emergency exit: physical Left Ctrl + Space + Esc kills kanata.
 ;;
-;; Based on kanata's cfg_samples/home-row-mod-advanced.kbd. Same file as
+;; Needs kanata v1.12.0+ (tap-hold-require-prior-idle). Same file as
 ;; omarchy-dotfiles/kanata/.config/kanata/kanata.kbd, so keep the two in sync.
 ;; ============================================================================
 
 (defcfg
   ;; Every key not listed in defsrc passes through untouched.
   process-unmapped-keys yes
+  ;; prior-idle, in ms. If mods misfire while typing, raise it. If a mod
+  ;; won't come on right after typing (e.g. Alt+j mid-edit), lower it.
+  tap-hold-require-prior-idle 150
+)
+
+(defvar
+  ;; If holding feels sluggish before the mod kicks in, lower it.
+  hold-time 200
+  ;; Tap a/s and press it again within this many ms to hold the letter itself
+  ;; (key repeat) instead of the mod.
+  tap-time 200
 )
 
 (defsrc
   a   s
 )
 
-(defvar
-  ;; Tuning: if letters turn into Alt/Shift while typing, raise hold-time.
-  ;; If holding feels sluggish before the modifier kicks in, lower it.
-  tap-time 200
-  hold-time 200
-)
-
 (deflayer base
   @a  @s
 )
 
-;; While typing quickly the home row mods are switched off, and they come back
-;; after 20 ms with no key activity.
-(deflayer nomods
-  a   s
-)
-
-(deffakekeys
-  to-base (layer-switch base)
-)
-
 (defalias
-  tap (multi
-    (layer-switch nomods)
-    (on-idle-fakekey to-base tap 20)
-  )
-
-  a (tap-hold-release $tap-time $hold-time (multi a @tap) lalt)
-  s (tap-hold-release $tap-time $hold-time (multi s @tap) lsft)
+  a (tap-hold-release $tap-time $hold-time a lalt)
+  s (tap-hold-release $tap-time $hold-time s lsft)
 )
