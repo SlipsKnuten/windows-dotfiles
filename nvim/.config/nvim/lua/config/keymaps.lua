@@ -192,6 +192,13 @@ vim.keymap.set("n", "<M-w>", function()
   Snacks.bufdelete()
 end, { desc = "Close buffer" })
 
+-- One-chord shortcuts for things that otherwise take a leader sequence.
+-- remap = true so they run whatever the leader mapping is (LazyVim lazy-loads
+-- grug-far behind Space s r).
+vim.keymap.set({ "n", "x" }, "<M-d>", "<leader>sr", { remap = true, desc = "Search and replace in project" })
+vim.keymap.set("n", "<M-f>", "/", { desc = "Search in current file" })
+vim.keymap.set("n", "<M-g>", "<leader>gg", { remap = true, desc = "Lazygit" })
+
 -- Swap i and a: i inserts after cursor, a inserts before
 vim.keymap.set("n", "i", "a", { noremap = true, desc = "Insert after cursor" })
 vim.keymap.set("n", "a", "i", { noremap = true, desc = "Insert before cursor" })
