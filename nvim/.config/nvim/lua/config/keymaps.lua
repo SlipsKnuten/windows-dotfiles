@@ -264,3 +264,14 @@ vim.keymap.set("n", "<M-o>", function()
   vim.api.nvim_win_set_buf(win, target.buf)
   pcall(vim.api.nvim_win_set_cursor, win, target.pos)
 end, { desc = "Navigate forward" })
+
+-- No terminals inside nvim: drop LazyVim's terminal keymaps. Snacks' terminal
+-- module stays enabled because the lazygit popup is built on it.
+for _, map in ipairs({
+  { "n", "<leader>ft" },
+  { "n", "<leader>fT" },
+  { { "n", "t" }, "<C-/>" },
+  { { "n", "t" }, "<C-_>" },
+}) do
+  pcall(vim.keymap.del, map[1], map[2])
+end
