@@ -44,7 +44,7 @@
       "tab": {
         "background": "#1E1E2EFF",
         "unfocusedBackground": "#181825FF",
-        "showCloseButton": "onHover"
+        "showCloseButton": "hover"
       },
       "tabRow": {
         "background": "#181825FF",
