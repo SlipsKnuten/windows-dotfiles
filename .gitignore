@@ -1,5 +1,6 @@
 # Per-machine overrides — see bash/.bashrc pattern in omarchy-dotfiles
 .bashrc.local
+.zshrc.local
 
 # Editor / OS noise
 .DS_Store

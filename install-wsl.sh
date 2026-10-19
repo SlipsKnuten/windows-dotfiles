@@ -28,7 +28,8 @@ log "Installing apt packages"
 sudo apt update
 sudo apt install -y \
   build-essential ripgrep fd-find tmux stow git curl unzip wl-clipboard \
-  python3-venv python3-pip
+  python3-venv python3-pip \
+  zsh fzf eza bat zoxide
 
 mkdir -p "$HOME/.local/bin"
 
@@ -70,6 +71,32 @@ else
   log "mise already installed"
 fi
 
+# --------------------------------------------------------------------- starship
+if ! command -v starship >/dev/null; then
+  log "Installing starship"
+  curl -fsSL https://starship.rs/install.sh | sh -s -- -y -b "$HOME/.local/bin"
+else
+  log "starship already installed"
+fi
+
+# ----------------------------------------------------------- oh-my-zsh + plugins
+# Cloned directly instead of using the oh-my-zsh installer, which would
+# overwrite ~/.zshrc (ours is stowed from zsh/).
+clone_or_pull() { # <url> <dir>
+  if [ -d "$2/.git" ]; then
+    git -C "$2" pull -q --ff-only || warn "Couldn't update $2"
+  else
+    git clone -q --depth=1 "$1" "$2"
+  fi
+}
+log "Installing oh-my-zsh and plugins"
+clone_or_pull https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh"
+ZSH_PLUGINS="$HOME/.oh-my-zsh/custom/plugins"
+clone_or_pull https://github.com/zsh-users/zsh-autosuggestions.git     "$ZSH_PLUGINS/zsh-autosuggestions"
+clone_or_pull https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_PLUGINS/zsh-syntax-highlighting"
+clone_or_pull https://github.com/zsh-users/zsh-completions.git         "$ZSH_PLUGINS/zsh-completions"
+clone_or_pull https://github.com/Aloxaf/fzf-tab.git                    "$ZSH_PLUGINS/fzf-tab"
+
 # ------------------------------------------------------- fd symlink (fdfind -> fd)
 if command -v fdfind >/dev/null && [ ! -e "$HOME/.local/bin/fd" ]; then
   ln -s "$(command -v fdfind)" "$HOME/.local/bin/fd"
@@ -77,7 +104,7 @@ fi
 
 # ------------------------------------------------------------------- stow subset
 # Omit: bash (see note below), bin, hypr, waybar, kitty, ghostty, zen, systemd, system.
-STOW_PACKAGES=(git lazygit mise nvim tmux xdg)
+STOW_PACKAGES=(git lazygit mise nvim tmux xdg zsh starship)
 
 log "Stowing dotfiles (${STOW_PACKAGES[*]})"
 stow -v -R -t "$HOME" "${STOW_PACKAGES[@]}"
@@ -97,6 +124,12 @@ alias lg='lazygit'
 EOF
 else
   log "~/.bashrc already contains dotfiles additions block"
+fi
+
+# ---------------------------------------------------------- zsh as login shell
+if [ "$(getent passwd "$USER" | cut -d: -f7)" != "$(command -v zsh)" ]; then
+  log "Making zsh your default shell"
+  sudo chsh -s "$(command -v zsh)" "$USER"
 fi
 
 # ------------------------------------------------------------- mise toolchains
@@ -120,7 +153,8 @@ cat <<EOF
 Done.
 
 Next steps:
-  * Open a new shell, or:  source ~/.bashrc
+  * Open a new Windows Terminal tab (zsh is now your shell)
+  * Machine-only env vars/secrets go in ~/.zshrc.local (not in the repo)
   * Launch nvim            (Mason will install LSP/formatters on first open)
   * Inside nvim:           :checkhealth    (confirm providers / treesitter)
 EOF

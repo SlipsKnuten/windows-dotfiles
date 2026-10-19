@@ -9,11 +9,11 @@ for the Arch/Omarchy machine.
 ## Layout
 
 ```
-git/   tmux/   lazygit/   mise/   nvim/   xdg/
-\______ stowed into $HOME on WSL ______/
+git/   tmux/   lazygit/   mise/   nvim/   xdg/   zsh/   starship/
+\______________ stowed into $HOME on WSL _______________/
 
-windows/    .wezterm.lua + kanata.kbd + setup-windows.ps1
-            — the script copies them into %USERPROFILE% and installs kanata
+windows/    .wezterm.lua + kanata.kbd + terminal.json + setup-windows.ps1
+            — the script copies/merges them into place and installs kanata
 
 install-wsl.sh    Bootstrap a fresh WSL Ubuntu install
 ```
@@ -30,13 +30,16 @@ cd ~/windows-dotfiles && ./install-wsl.sh
 No auth needed — the repo is public, HTTPS clone works out of the box.
 
 The script:
-- Installs the apt baseline (build-essential, ripgrep, fd-find, tmux, stow, …).
-- Pulls neovim, lazygit, mise from vendor releases (apt versions lag).
-- Stows the Linux configs into `~/.config`.
+- Installs the apt baseline (build-essential, ripgrep, fd-find, tmux, stow,
+  zsh, fzf, eza, bat, zoxide, …).
+- Pulls neovim, lazygit, mise, starship from vendor releases (apt versions lag).
+- Clones oh-my-zsh and its plugins (see [Shell](#shell-zsh)).
+- Stows the Linux configs into `~/.config` and `~/.zshrc`.
+- Makes zsh your login shell.
 - Appends a guarded mise activation block to `~/.bashrc`.
 - Pre-syncs LazyVim plugins headlessly so the first `nvim` launch is instant.
 
-After it finishes: open a new shell, then `nvim` — Mason will install
+After it finishes: open a new Windows Terminal tab, then `nvim` — Mason will install
 LSPs/formatters on first open. Run `:checkhealth` to verify.
 
 If you want to push back to this repo, set up auth once:
@@ -44,6 +47,24 @@ If you want to push back to this repo, set up auth once:
 - SSH: `ssh-keygen -t ed25519 -C "your@email"` then add the pubkey at
   https://github.com/settings/ssh/new and switch the remote to
   `git@github.com:SlipsKnuten/windows-dotfiles.git`.
+
+## Shell (zsh)
+
+`zsh/.zshrc` is oh-my-zsh with a [starship](https://starship.rs) prompt
+(Catppuccin powerline preset in `starship/`, matching the nvim theme).
+
+- **Typing:** grey suggestions from history appear as you type — press → or
+  End to accept. Commands turn green or red depending on whether they exist.
+- **Tab:** completion opens in a fuzzy finder (fzf-tab); `<` / `>` switch
+  groups, and `cd` previews the folder.
+- **Ctrl-R** searches history, **Ctrl-T** picks a file, **Alt-C** jumps
+  into a folder (fzf). `z foo` jumps to a folder you've visited (zoxide).
+- **Esc Esc** puts `sudo` in front of the current command.
+- `ls`/`ll`/`lt` use eza (icons, git status, tree), `lg` = lazygit, `v` = nvim.
+
+Plugins are cloned into `~/.oh-my-zsh/custom/plugins`. Running
+`install-wsl.sh` again updates them. Machine-only settings (secrets, work env
+vars) go in `~/.zshrc.local`, which isn't in the repo.
 
 ## Windows setup
 
@@ -62,6 +83,11 @@ would be installed into that account's profile instead of yours.
 
 `windows/setup-windows.ps1`:
 - Copies `.wezterm.lua` to `%USERPROFILE%` and `kanata.kbd` to `%APPDATA%\kanata\` (where kanata looks for it by default).
+- Merges `terminal.json` into Windows Terminal's `settings.json`: Catppuccin
+  Mocha colors and tab bar, CaskaydiaCove Nerd Font, padding, slight
+  transparency. Only those keys change — your profiles stay as they are, and
+  the old file is kept as `settings.json.bak`. The font has to be installed
+  on Windows (it's a Nerd Font, needed for the prompt icons).
 - Downloads kanata (pinned to `$KanataVersion` at the top of the script),
   verifies its checksum, and installs it as `%USERPROFILE%\bin\kanata.exe`.
 - Checks the config, adds a Startup shortcut so kanata runs on login, and

@@ -10,6 +10,8 @@
 #   2. Downloads kanata (checksum-verified), installs it to ~\bin\kanata.exe,
 #      checks the config and (re)starts it.
 #   3. Adds a Startup shortcut so kanata runs on login.
+#   4. Merges terminal.json (theme, font, colors) into Windows Terminal's
+#      settings.json, leaving your profiles and other settings alone.
 # ============================================================================
 
 param(
@@ -43,6 +45,22 @@ function New-StartupShortcut($name, $target, $arguments, $workDir) {
   $lnk.WorkingDirectory = $workDir
   $lnk.Save()
   Note "Startup shortcut: $name.lnk"
+}
+
+# Copies every key in $patch onto $target, recursing into objects. Color
+# schemes and themes are lists, so those are replaced by name instead.
+function Merge-Settings($target, $patch) {
+  foreach ($p in $patch.PSObject.Properties) {
+    $cur = $target.PSObject.Properties[$p.Name]
+    if ($cur -and $cur.Value -is [PSCustomObject] -and $p.Value -is [PSCustomObject]) {
+      Merge-Settings $cur.Value $p.Value
+    } elseif ($cur -and $p.Name -in "schemes", "themes") {
+      $names = @($p.Value | ForEach-Object { $_.name })
+      $target.($p.Name) = @($cur.Value | Where-Object { $_.name -notin $names }) + @($p.Value)
+    } else {
+      $target | Add-Member -NotePropertyName $p.Name -NotePropertyValue $p.Value -Force
+    }
+  }
 }
 
 # --- 1. Config files ---------------------------------------------------------
@@ -102,5 +120,27 @@ Get-Process kanata -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Seconds 1
 Start-Process explorer.exe "`"$startup\kanata.lnk`""
 Note "kanata started (emergency exit: Left Ctrl + Space + Esc)"
+
+# --- 4. Windows Terminal ----------------------------------------------------
+Step "Windows Terminal"
+$utf8 = New-Object Text.UTF8Encoding $false # WT's file has no BOM; keep it that way
+$wtFiles = @(
+  "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json",
+  "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe\LocalState\settings.json",
+  "$env:LOCALAPPDATA\Microsoft\Windows Terminal\settings.json"
+) | Where-Object { Test-Path $_ }
+
+if (-not $wtFiles) {
+  Note "settings.json not found. Open Windows Terminal once, then run this again."
+}
+foreach ($file in $wtFiles) {
+  $patch = [IO.File]::ReadAllText((Join-Path $repo "terminal.json")) | ConvertFrom-Json
+  # Windows PowerShell 5.1 can't parse comments, so drop whole-line // comments.
+  $settings = ([IO.File]::ReadAllText($file) -replace '(?m)^\s*//.*$', '') | ConvertFrom-Json
+  Merge-Settings $settings $patch
+  Copy-Item $file "$file.bak" -Force
+  [IO.File]::WriteAllText($file, ($settings | ConvertTo-Json -Depth 32), $utf8)
+  Note "Updated $file (old version saved as settings.json.bak)"
+}
 
 Write-Host "`nDone." -ForegroundColor Green
