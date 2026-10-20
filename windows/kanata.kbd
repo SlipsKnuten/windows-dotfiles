@@ -41,10 +41,10 @@
 
 (defvar
   ;; If holding feels sluggish before the mod kicks in, lower it.
-  hold-time 200
+  hold-time 300
   ;; Tap a/s and press it again within this many ms to hold the letter itself
   ;; (key repeat) instead of the mod.
-  tap-time 200
+  tap-time 100
 )
 
 (defsrc
