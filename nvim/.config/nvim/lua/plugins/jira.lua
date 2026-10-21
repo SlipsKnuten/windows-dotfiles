@@ -127,8 +127,33 @@ local function list_args(args, filters, clauses, order_by, columns)
   return vim.list_extend(args, { "--order-by", order_by, "--csv", "--columns", table.concat(columns, ",") })
 end
 
--- `query(opts, search)` returns { args, columns, transform, cache? }; only queries without
--- search text are cached, so reopening a picker is instant but searches are always fresh
+local BOARD_SCRIPT = vim.fn.stdpath("config") .. "/scripts/jira_board.py"
+local BOARDS = {
+  { id = 1258, name = "Sync Board (Dev)" },
+  { id = 719, name = "Refine & Rank" },
+}
+
+-- the "Silo GenAI" quick filter from the boards; <a-g> toggles it in every picker, and the
+-- choice carries over to the next picker until Neovim restarts
+local GENAI_JQL = "component = GenAI"
+local state = { genai = true }
+
+local function genai_clause()
+  return state.genai and GENAI_JQL or nil
+end
+
+-- JQL clauses to AND together, skipping the nil ones
+local function clauses(...)
+  local out = {}
+  for i = 1, select("#", ...) do
+    out[#out + 1] = select(i, ...)
+  end
+  return out
+end
+
+-- `query(opts, search)` returns { args, cmd?, columns | decode = "json", transform, cache?, notify? }.
+-- Only queries without search text are cached, so reopening a picker is instant but searches
+-- are always fresh.
 local function server_finder(query)
   return function(opts, ctx)
     local q = query(opts, ctx.filter.search)
@@ -140,13 +165,17 @@ local function server_finder(query)
       end
     end
 
-    local header = table.concat(q.columns, ","):upper()
+    local header = q.columns and table.concat(q.columns, ","):upper()
     local proc = require("snacks.picker.source.proc").proc(
       ctx:opts({
-        cmd = require("jira.config").options.cli.cmd,
+        cmd = q.cmd or require("jira.config").options.cli.cmd,
         args = q.args,
-        notify = false, -- jira-cli exits with an error when nothing matches
+        notify = q.notify or false, -- jira-cli exits with an error when nothing matches
         transform = function(item)
+          if q.decode == "json" then
+            local ok, row = pcall(vim.json.decode, item.text)
+            return ok and q.transform(row) or false
+          end
           local values = parse_csv_line(item.text)
           if item.text == header or #values < #q.columns then
             return false
@@ -211,23 +240,21 @@ end
 -- `opts.sprint` limits it to the open sprint and hides done issues, like before
 local issues_finder = server_finder(function(opts, search)
   local cli = require("jira.config").options.cli.issues
-  local clauses = {}
-  if opts.sprint then
-    clauses[#clauses + 1] = "sprint in openSprints()"
-  end
   local text = search_jql(search, PROJECT)
-  clauses[#clauses + 1] = text
   return {
     args = list_args(
       { "issue", "list" },
       opts.sprint and cli.filters or {},
-      clauses,
+      clauses(opts.sprint and "sprint in openSprints()" or nil, genai_clause(), text),
       opts.sprint and cli.order_by or "updated",
       cli.columns
     ),
     columns = cli.columns,
     transform = issue_item,
-    cache = not text and { key = "issues", params = { scope = opts.sprint and "sprint" or "project" } } or nil,
+    cache = not text and {
+      key = "issues",
+      params = { scope = opts.sprint and "sprint" or "project", genai = state.genai },
+    } or nil,
   }
 end)
 
@@ -235,25 +262,143 @@ local epics_finder = server_finder(function(_, search)
   local cli = require("jira.config").options.cli.epics
   local text = search_jql(search, EPIC_PROJECT)
   return {
-    args = list_args(cli.args, cli.filters, { text }, cli.order_by, cli.columns),
+    args = list_args(cli.args, cli.filters, clauses(genai_clause(), text), cli.order_by, cli.columns),
     columns = cli.columns,
     transform = epic_item,
-    cache = not text and { key = "epics", params = { scope = "search" } } or nil,
+    cache = not text and { key = "epics", params = { scope = "search", genai = state.genai } } or nil,
   }
 end)
 
-local function issues_title(sprint)
-  return sprint and ("JIRA Issues · %s current sprint"):format(PROJECT) or ("JIRA Issues · %s"):format(PROJECT)
+local function epic_issues_finder(epic_key)
+  return server_finder(function()
+    local cli = require("jira.config").options.cli.epic_issues
+    return {
+      args = list_args({ "issue", "list", "--parent", epic_key }, cli.filters, clauses(genai_clause()), cli.order_by, cli.columns),
+      columns = cli.columns,
+      transform = issue_item,
+      -- jira.nvim clears "epic_issues*" and "issues*" caches after changing an issue
+      cache = { key = "epic_issues", params = { epic_key = epic_key, genai = state.genai } },
+    }
+  end)
+end
+
+-- all of a board's issues, in board-column order and then by rank (see scripts/jira_board.py)
+local function board_finder(board)
+  return server_finder(function()
+    return {
+      cmd = "python3",
+      args = { "-I", BOARD_SCRIPT, tostring(board.id), genai_clause() or "" },
+      decode = "json",
+      notify = true,
+      transform = function(row)
+        local item = issue_item(row)
+        item.column = row.column
+        item.text = row.column .. " " .. item.text
+        return item
+      end,
+      cache = { key = "issues", params = { board = board.id, genai = state.genai } },
+    }
+  end)
+end
+
+local COLUMN_WIDTH = 17
+
+local function format_board_issue(item, picker)
+  local hl = require("jira.config").options.ui.status_highlights[item.status] or "Comment"
+  local column = item.column or ""
+  local ret = { { column .. (" "):rep(math.max(1, COLUMN_WIDTH - vim.fn.strdisplaywidth(column))), hl } }
+  return vim.list_extend(ret, require("jira.picker.formatters").format_jira_issues(item, picker))
+end
+
+local function picker_title(picker)
+  local parts = { picker.opts.jira_title }
+  if picker.opts.sprint then
+    parts[#parts + 1] = "current sprint"
+  end
+  if state.genai then
+    parts[#parts + 1] = "Silo GenAI"
+  end
+  return table.concat(parts, " · ")
+end
+
+local function show_title(picker)
+  picker.title = picker_title(picker)
+  picker:update_titles()
+end
+
+local TOGGLES = {
+  sprint = {
+    key = "<c-s>",
+    action = function(picker)
+      picker.opts.sprint = not picker.opts.sprint
+    end,
+  },
+  genai = {
+    key = "<a-g>",
+    action = function()
+      state.genai = not state.genai
+    end,
+  },
+}
+
+-- adds the named toggles' keys and actions to a picker source, and keeps its title in sync
+local function add_toggles(src, names)
+  src.actions = src.actions or {}
+  src.on_show = show_title
+  src.win = src.win or {}
+  for _, win in ipairs({ "input", "list" }) do
+    src.win[win] = src.win[win] or {}
+    -- copy: jira.nvim shares one keys table between all of its pickers
+    local keys = vim.tbl_extend("force", {}, src.win[win].keys or {})
+    for _, name in ipairs(names) do
+      local action = "jira_toggle_" .. name
+      src.actions[action] = function(picker)
+        TOGGLES[name].action(picker)
+        picker.title = picker_title(picker)
+        picker:refresh()
+      end
+      keys[TOGGLES[name].key] = win == "input" and { action, mode = { "i", "n" } } or action
+    end
+    src.win[win].keys = keys
+  end
+  return src
+end
+
+local function board_source(board)
+  local config = require("jira.config").options
+  return add_toggles({
+    jira_title = "JIRA Board · " .. board.name,
+    layout = config.layout.issues,
+    finder = board_finder(board),
+    format = format_board_issue,
+    preview = "preview_jira_issue",
+    confirm = "action_jira_list_actions",
+    win = {
+      input = { title = "{title}", keys = config.keymaps.input },
+      list = { keys = config.keymaps.list },
+      preview = { keys = config.keymaps.preview },
+    },
+  }, { "genai" })
 end
 
 local function open_issues(sprint)
-  require("jira").open_jira_issues({ sprint = sprint, title = issues_title(sprint) })
+  require("jira").open_jira_issues({ sprint = sprint })
 end
 
-local function toggle_sprint(picker)
-  picker.opts.sprint = not picker.opts.sprint
-  picker.title = issues_title(picker.opts.sprint)
-  picker:refresh()
+local function open_board()
+  if not package.loaded["jira.picker"] then
+    require("jira.picker").register()
+  end
+  vim.ui.select(BOARDS, {
+    prompt = "Jira board",
+    format_item = function(board)
+      return board.name
+    end,
+  }, function(board)
+    if board then
+      require("snacks").picker(board_source(board))
+    end
+  end)
 end
 
 return {
@@ -276,6 +421,7 @@ return {
       desc = "Jira Issues (current sprint)",
     },
     { "<leader>je", "<cmd>JiraEpic<cr>", desc = "Jira Epics" },
+    { "<leader>jb", open_board, desc = "Jira Boards" },
   },
   opts = {
     cli = {
@@ -299,23 +445,30 @@ return {
 
     -- the snacks source tables are shared with snacks once registered, so patch them in place
     local sources = require("jira.picker.sources")
-    local keymaps = require("jira.config").options.keymaps
-    local toggle_key = { ["<c-s>"] = { "jira_toggle_sprint", mode = { "i", "n" } } }
 
     local issues = sources.source_jira_issues
     issues.finder = issues_finder
-    issues.title = issues_title(false)
+    issues.jira_title = "JIRA Issues · " .. PROJECT
     issues.live = true
     issues.supports_live = true
-    issues.actions = { jira_toggle_sprint = toggle_sprint }
     issues.win.input.title = "{title} {live}"
-    issues.win.input.keys = vim.tbl_extend("force", {}, keymaps.input, toggle_key)
-    issues.win.list.keys = vim.tbl_extend("force", {}, keymaps.list, { ["<c-s>"] = "jira_toggle_sprint" })
+    add_toggles(issues, { "sprint", "genai" })
 
     local epics = sources.source_jira_epics
     epics.finder = epics_finder
+    epics.jira_title = "JIRA Epics · " .. EPIC_PROJECT
     epics.live = true
     epics.supports_live = true
+    add_toggles(epics, { "genai" })
+
+    local epic_issues = sources.jira_epic_issues
+    sources.jira_epic_issues = function(epic_key)
+      local src = epic_issues(epic_key)
+      src.finder = epic_issues_finder(epic_key)
+      src.jira_title = "JIRA Epic Issues · " .. epic_key
+      src.win.input.title = "{title}"
+      return add_toggles(src, { "genai" })
+    end
 
     local markdown = require("jira.markdown")
     local format_issue = markdown.format_issue
