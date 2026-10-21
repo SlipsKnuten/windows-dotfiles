@@ -77,12 +77,204 @@ local function tidy_markdown(lines)
   return out
 end
 
+-- jira-cli returns at most 100 issues and ignores the page offset on Jira Cloud, so a picker
+-- can never hold a whole project. Instead the issue and epic pickers search on the server as
+-- you type (snacks "live" mode; <c-g> switches to fuzzy filtering of the loaded results).
+local PROJECT = "DNAMINDL"
+local EPIC_PROJECT = "DNA"
+
+local function parse_csv_line(line)
+  local values, current, in_quotes = {}, {}, false
+  for char in line:gmatch(".") do
+    if char == '"' then
+      in_quotes = not in_quotes
+    elseif char == "," and not in_quotes then
+      values[#values + 1] = table.concat(current)
+      current = {}
+    else
+      current[#current + 1] = char
+    end
+  end
+  values[#values + 1] = table.concat(current)
+  return values
+end
+
+-- an issue key or number looks the issue up; other text is a full-text search, with the last
+-- word matched as a prefix so results appear while a word is still being typed
+local function search_jql(text, project)
+  text = vim.trim(text or "")
+  local key = text:upper():match("^%u[%u%d]*%-%d+$")
+  if key then
+    return ('key = "%s"'):format(key)
+  end
+  -- characters with a meaning in Jira's text search make the whole query fail
+  local words = vim.trim((text:gsub('[%+%-&|!(){}%[%]^~*?\\:"/]', " ")))
+  if words == "" then
+    return nil
+  end
+  local jql = ('text ~ "%s*"'):format(words)
+  if words:match("^%d+$") then
+    jql = ('key = "%s-%s" OR %s'):format(project, words, jql)
+  end
+  return jql
+end
+
+local function list_args(args, filters, clauses, order_by, columns)
+  args = vim.list_extend(vim.deepcopy(args), filters)
+  if #clauses > 0 then
+    vim.list_extend(args, { "-q", "(" .. table.concat(clauses, ") AND (") .. ")" })
+  end
+  return vim.list_extend(args, { "--order-by", order_by, "--csv", "--columns", table.concat(columns, ",") })
+end
+
+-- `query(opts, search)` returns { args, columns, transform, cache? }; only queries without
+-- search text are cached, so reopening a picker is instant but searches are always fresh
+local function server_finder(query)
+  return function(opts, ctx)
+    local q = query(opts, ctx.filter.search)
+    local cache = require("jira.cache")
+    if q.cache then
+      local cached = cache.get(q.cache.key, q.cache.params)
+      if cached and cached.items then
+        return ctx.filter:filter(cached.items)
+      end
+    end
+
+    local header = table.concat(q.columns, ","):upper()
+    local proc = require("snacks.picker.source.proc").proc(
+      ctx:opts({
+        cmd = require("jira.config").options.cli.cmd,
+        args = q.args,
+        notify = false, -- jira-cli exits with an error when nothing matches
+        transform = function(item)
+          local values = parse_csv_line(item.text)
+          if item.text == header or #values < #q.columns then
+            return false
+          end
+          local row = {}
+          for i, column in ipairs(q.columns) do
+            -- jira-cli escapes "[text]" as "[text[]"
+            row[column] = values[i]:gsub("%[([^%]]+)%[%]", "[%1]")
+          end
+          return q.transform(row)
+        end,
+      }),
+      ctx
+    )
+    if not q.cache then
+      return proc
+    end
+
+    ---@async
+    return function(cb)
+      local items = {}
+      proc(function(item)
+        items[#items + 1] = item
+        cb(item)
+      end)
+      if #items > 0 then
+        vim.schedule(function()
+          cache.set(q.cache.key, q.cache.params, items)
+        end)
+      end
+    end
+  end
+end
+
+-- same items as jira.nvim's own finders build, so its formatters, previews and actions work
+local function issue_item(row)
+  return {
+    text = table.concat({ row.key, row.assignee, row.status, row.summary, row.labels }, " "),
+    key = row.key,
+    type = row.type,
+    assignee = row.assignee,
+    status = row.status,
+    summary = row.summary,
+    labels = row.labels,
+    _raw = row,
+  }
+end
+
+local function epic_item(row)
+  local icons = require("jira.config").options.ui.type_icons
+  return {
+    text = ("%s %s %s"):format(icons.Epic or icons.default, row.key, row.summary),
+    key = row.key,
+    type = "Epic",
+    status = row.status,
+    summary = row.summary,
+    _raw = row,
+  }
+end
+
+-- whole project by default (done issues included, newest activity first);
+-- `opts.sprint` limits it to the open sprint and hides done issues, like before
+local issues_finder = server_finder(function(opts, search)
+  local cli = require("jira.config").options.cli.issues
+  local clauses = {}
+  if opts.sprint then
+    clauses[#clauses + 1] = "sprint in openSprints()"
+  end
+  local text = search_jql(search, PROJECT)
+  clauses[#clauses + 1] = text
+  return {
+    args = list_args(
+      { "issue", "list" },
+      opts.sprint and cli.filters or {},
+      clauses,
+      opts.sprint and cli.order_by or "updated",
+      cli.columns
+    ),
+    columns = cli.columns,
+    transform = issue_item,
+    cache = not text and { key = "issues", params = { scope = opts.sprint and "sprint" or "project" } } or nil,
+  }
+end)
+
+local epics_finder = server_finder(function(_, search)
+  local cli = require("jira.config").options.cli.epics
+  local text = search_jql(search, EPIC_PROJECT)
+  return {
+    args = list_args(cli.args, cli.filters, { text }, cli.order_by, cli.columns),
+    columns = cli.columns,
+    transform = epic_item,
+    cache = not text and { key = "epics", params = { scope = "search" } } or nil,
+  }
+end)
+
+local function issues_title(sprint)
+  return sprint and ("JIRA Issues · %s current sprint"):format(PROJECT) or ("JIRA Issues · %s"):format(PROJECT)
+end
+
+local function open_issues(sprint)
+  require("jira").open_jira_issues({ sprint = sprint, title = issues_title(sprint) })
+end
+
+local function toggle_sprint(picker)
+  picker.opts.sprint = not picker.opts.sprint
+  picker.title = issues_title(picker.opts.sprint)
+  picker:refresh()
+end
+
 return {
   "l-lin/jira.nvim",
   dependencies = { "folke/snacks.nvim" },
   cmd = { "JiraIssues", "JiraEpic", "JiraStartWorkingOn" },
   keys = {
-    { "<leader>ji", "<cmd>JiraIssues<cr>", desc = "Jira Issues (current sprint)" },
+    {
+      "<leader>ji",
+      function()
+        open_issues(false)
+      end,
+      desc = "Jira Issues (search " .. PROJECT .. ")",
+    },
+    {
+      "<leader>js",
+      function()
+        open_issues(true)
+      end,
+      desc = "Jira Issues (current sprint)",
+    },
     { "<leader>je", "<cmd>JiraEpic<cr>", desc = "Jira Epics" },
   },
   opts = {
@@ -104,6 +296,26 @@ return {
   },
   config = function(_, opts)
     require("jira").setup(opts)
+
+    -- the snacks source tables are shared with snacks once registered, so patch them in place
+    local sources = require("jira.picker.sources")
+    local keymaps = require("jira.config").options.keymaps
+    local toggle_key = { ["<c-s>"] = { "jira_toggle_sprint", mode = { "i", "n" } } }
+
+    local issues = sources.source_jira_issues
+    issues.finder = issues_finder
+    issues.title = issues_title(false)
+    issues.live = true
+    issues.supports_live = true
+    issues.actions = { jira_toggle_sprint = toggle_sprint }
+    issues.win.input.title = "{title} {live}"
+    issues.win.input.keys = vim.tbl_extend("force", {}, keymaps.input, toggle_key)
+    issues.win.list.keys = vim.tbl_extend("force", {}, keymaps.list, { ["<c-s>"] = "jira_toggle_sprint" })
+
+    local epics = sources.source_jira_epics
+    epics.finder = epics_finder
+    epics.live = true
+    epics.supports_live = true
 
     local markdown = require("jira.markdown")
     local format_issue = markdown.format_issue
