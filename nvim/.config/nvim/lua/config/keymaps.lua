@@ -191,6 +191,10 @@ end
 vim.keymap.set("n", "<M-w>", function()
   Snacks.bufdelete()
 end, { desc = "Close buffer" })
+-- Alt+m does the same with the right hand, easier with Alt on home-row `a`
+vim.keymap.set("n", "<M-m>", function()
+  Snacks.bufdelete()
+end, { desc = "Close buffer" })
 
 -- One-chord shortcuts for things that otherwise take a leader sequence.
 -- remap = true so they run whatever the leader mapping is (LazyVim lazy-loads
