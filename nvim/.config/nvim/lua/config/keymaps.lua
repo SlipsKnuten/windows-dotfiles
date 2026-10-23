@@ -197,6 +197,7 @@ end, { desc = "Close buffer" })
 -- grug-far behind Space s r).
 vim.keymap.set({ "n", "x" }, "<M-d>", "<leader>sr", { remap = true, desc = "Search and replace in project" })
 vim.keymap.set("n", "<M-f>", "/", { desc = "Search in current file" })
+vim.keymap.set("n", "<M-s>", "<leader>/", { remap = true, desc = "Grep in project" })
 vim.keymap.set("n", "<M-g>", "<leader>gg", { remap = true, desc = "Lazygit" })
 
 -- Swap i and a: i inserts after cursor, a inserts before
